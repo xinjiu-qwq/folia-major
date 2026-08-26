@@ -9,10 +9,10 @@ import { chromium } from 'playwright';
 /**
  * 采样单个 visualizer 长跑时的实际内存占用。
  *
- * 为什么不用 JS 堆：visualizer 的内存几乎全在堆外 —— canvas backing store、合成层、
- * Skia 的 GPU 路径缓存。`Runtime.getHeapUsage` 对这些一无所知，看上去永远是平的。
- * 所以这里直接按进程采工作集，并按 Chromium 的 --type= 分类，能直接看出问题是在
- * renderer（光栅化/DOM）还是 gpu-process（纹理/路径缓存）。
+ * 为什么不只看 JS 堆：canvas backing store、合成层和 GPU 资源不会完整反映在
+ * `Runtime.getHeapUsage` 中。这里按进程采工作集，并按 Chromium 的 --type= 分类，用来
+ * 判断增长更接近 renderer、gpu-process 还是 browser；该数据只能缩小范围，不能单独证明
+ * 具体分配源。
  *
  * 前置：另开一个终端跑 `npm run dev -- --port 4173`。
  *

@@ -181,23 +181,12 @@ function drawHairspring(
     ctx.restore();
 }
 
-/**
- * Widest thing drawn around the wheel centre, as a multiple of baseRadius:
- * the centre gradient reaches 1.65R, and without it the outermost guide ring reaches 1.4R.
- * Everything else (gear teeth at R+8, outer ticks at 1.15R+12, the balance/transmission
- * satellites at ~1.12R) fits inside those.
- */
+/** Resolves the furthest clockwork pixel from the wheel centre in CSS pixels. */
 const resolveClockworkReach = (baseRadius: number, hasCenterGradient: boolean) => (
     baseRadius * (hasCenterGradient ? 1.65 : 1.4) + 16
 );
 
-/**
- * The clockwork only occupies a disc around the wheel centre, and the wheel sits on or near the
- * left edge by default — so a full-viewport canvas spends most of its backing store on empty
- * pixels. That is pure GPU memory: the backing store is allocated at devicePixelRatio², kept in
- * a compositor buffer, and re-uploaded every frame because the gears animate continuously.
- * Sizing the element to the drawn bounds instead cuts that cost proportionally.
- */
+/** Bounds the canvas to the clockwork instead of allocating transparent pixels for the viewport. */
 const resolveClockworkBox = (
     centerX: number,
     centerY: number,
@@ -208,7 +197,6 @@ const resolveClockworkBox = (
     hasCenterGradient: boolean,
 ) => {
     const reach = resolveClockworkReach(baseRadius, hasCenterGradient);
-    // The focal axis line and its arrowhead run further right than the disc itself.
     const rightReach = Math.max(reach, lyricRingRadius + 16);
     const left = Math.max(0, Math.floor(centerX - reach));
     const top = Math.max(0, Math.floor(centerY - reach));
@@ -221,108 +209,6 @@ const resolveClockworkBox = (
         width: Math.max(0, right - left),
         height: Math.max(0, bottom - top),
     };
-};
-
-/**
- * Retina backing stores grow with the square of the ratio, and this canvas is only thin
- * wireframe strokes — past 2x the extra pixels buy nothing visible.
- */
-const CLOCKWORK_MAX_DPR = 2;
-
-/**
- * A pre-rasterised, rotation-agnostic piece of the movement, drawn centred in its own canvas.
- *
- * Every gear here is a rigid body: its geometry never changes, only the angle it is drawn at.
- * Stroking those paths live each frame means Skia re-tessellates them under a matrix that is
- * different on every frame, so each one misses the GPU path cache and allocates fresh atlas
- * space — measured at ~200MB of steady-state GPU memory for this movement alone, several times
- * what the other visualizers use. Rasterising each part once and blitting it as an image keeps
- * the identical picture while touching the path cache exactly zero times per frame.
- */
-interface ClockworkSprite {
-    canvas: HTMLCanvasElement;
-    /** Half-extent in CSS px; the part is drawn centred at (half, half). */
-    half: number;
-}
-
-interface ClockworkSpriteCache {
-    /** Everything the sprites' appearance depends on. A change here retires the whole set. */
-    generation: string;
-    sprites: Map<string, ClockworkSprite>;
-}
-
-/** Comfortably inside the max texture size of every GPU this ships to. */
-const SPRITE_MAX_TEXTURE_PX = 4096;
-
-const createSpriteCache = (): ClockworkSpriteCache => ({ generation: '', sprites: new Map() });
-
-const releaseSpriteCache = (cache: ClockworkSpriteCache) => {
-    cache.sprites.forEach(sprite => {
-        // Zeroing the size drops the backing store now instead of at the next GC.
-        sprite.canvas.width = 0;
-        sprite.canvas.height = 0;
-    });
-    cache.sprites.clear();
-    cache.generation = '';
-};
-
-/**
- * Returns the cached sprite for `key`, drawing it on first use. `draw` receives a context whose
- * origin is the part's centre, already scaled so one unit is one CSS pixel.
- */
-const getClockworkSprite = (
-    cache: ClockworkSpriteCache,
-    generation: string,
-    key: string,
-    half: number,
-    dpr: number,
-    draw: (ctx: CanvasRenderingContext2D) => void,
-): ClockworkSprite | null => {
-    if (cache.generation !== generation) {
-        releaseSpriteCache(cache);
-        cache.generation = generation;
-    }
-
-    const cached = cache.sprites.get(key);
-    if (cached) return cached;
-
-    const side = Math.ceil(half * 2);
-    if (!Number.isFinite(side) || side <= 0) return null;
-
-    // Very large wheels on very dense displays would otherwise ask for a texture the GPU may
-    // refuse; drop the raster scale instead of dropping the part.
-    const scale = Math.min(dpr, SPRITE_MAX_TEXTURE_PX / side);
-    if (scale <= 0) return null;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(side * scale);
-    canvas.height = Math.round(side * scale);
-    const spriteCtx = canvas.getContext('2d');
-    if (!spriteCtx) return null;
-
-    spriteCtx.scale(scale, scale);
-    spriteCtx.translate(half, half);
-    draw(spriteCtx);
-
-    const sprite = { canvas, half };
-    cache.sprites.set(key, sprite);
-    return sprite;
-};
-
-/** Draws a cached part at `(cx, cy)`, rotated by `rotationRad`. */
-const blitClockworkSprite = (
-    ctx: CanvasRenderingContext2D,
-    sprite: ClockworkSprite | null,
-    cx: number,
-    cy: number,
-    rotationRad: number,
-) => {
-    if (!sprite) return;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rotationRad);
-    ctx.drawImage(sprite.canvas, -sprite.half, -sprite.half, sprite.half * 2, sprite.half * 2);
-    ctx.restore();
 };
 
 /**
@@ -359,7 +245,6 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
     const secondGearVelocityRef = useRef(0);
 
     const coverImageRef = useRef<HTMLImageElement | null>(null);
-    const spriteCacheRef = useRef<ClockworkSpriteCache>(createSpriteCache());
 
     useEffect(() => {
         if (!showCover || !coverUrl) {
@@ -490,7 +375,7 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
                 animationFrameId = window.requestAnimationFrame(render);
                 return;
             }
-            const dpr = Math.min(window.devicePixelRatio || 1, CLOCKWORK_MAX_DPR);
+            const dpr = window.devicePixelRatio || 1;
             const pixelWidth = Math.round(width * dpr);
             const pixelHeight = Math.round(height * dpr);
 
@@ -502,8 +387,6 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
             ctx.save();
             ctx.scale(dpr, dpr);
             ctx.clearRect(0, 0, width, height);
-            // Everything below is authored in viewport coordinates; the canvas only covers the
-            // clockwork's bounding box, so shift the origin to that box's top-left.
             ctx.translate(-box.left, -box.top);
 
             // 0. Optional Central Dark Radial Gradient using theme background color
@@ -563,12 +446,6 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
             const jewelFillColor = colorWithAlpha(p.accentTextColor, 0.28 * decorOpacityMultiplier);
             const jewelStrokeColor = colorWithAlpha(p.accentTextColor, 0.65 * decorOpacityMultiplier);
 
-            const spriteCache = spriteCacheRef.current;
-            const spriteGeneration = `${Math.round(p.baseRadius)}|${dpr}|${p.primaryTextColor}|${p.accentTextColor}|${decorOpacityMultiplier}`;
-            const sprite = (key: string, half: number, draw: (c: CanvasRenderingContext2D) => void) => (
-                getClockworkSprite(spriteCache, spriteGeneration, key, half, dpr, draw)
-            );
-
             // 1. Technical Radial Ticks & Concentric Guide Rings
             ctx.strokeStyle = primaryAlpha15;
             ctx.lineWidth = 1;
@@ -583,63 +460,48 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
             // Outer Technical Radial Ticks around main wheel (every 6 deg)
             const tickCount = 60;
             const outerTickR = p.baseRadius * 1.15;
-            blitClockworkSprite(
-                ctx,
-                sprite('ticks', outerTickR + 14, sctx => {
-                    for (let i = 0; i < tickCount; i++) {
-                        const angle = (i * Math.PI * 2) / tickCount;
-                        const isMajor = i % 5 === 0;
-                        const tickLen = isMajor ? 12 : 6;
-                        sctx.strokeStyle = isMajor ? accentAlpha35 : primaryAlpha15;
-                        sctx.lineWidth = isMajor ? 1.5 : 1;
-                        sctx.beginPath();
-                        sctx.moveTo(outerTickR * Math.cos(angle), outerTickR * Math.sin(angle));
-                        sctx.lineTo((outerTickR + tickLen) * Math.cos(angle), (outerTickR + tickLen) * Math.sin(angle));
-                        sctx.stroke();
-                    }
-                }),
-                p.centerX,
-                p.centerY,
-                currentGearAngle * 0.2,
-            );
+            for (let i = 0; i < tickCount; i++) {
+                const angle = (i * Math.PI * 2) / tickCount + currentGearAngle * 0.2;
+                const isMajor = i % 5 === 0;
+                const tickLen = isMajor ? 12 : 6;
+                const x1 = p.centerX + outerTickR * Math.cos(angle);
+                const y1 = p.centerY + outerTickR * Math.sin(angle);
+                const x2 = p.centerX + (outerTickR + tickLen) * Math.cos(angle);
+                const y2 = p.centerY + (outerTickR + tickLen) * Math.sin(angle);
+
+                ctx.strokeStyle = isMajor ? accentAlpha35 : primaryAlpha15;
+                ctx.lineWidth = isMajor ? 1.5 : 1;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
 
             // 2. Main Escapement Gear Wheel (Outer Rim)
-            blitClockworkSprite(
+            drawGearTeeth(
                 ctx,
-                sprite('mainGear', p.baseRadius + 12, sctx => drawGearTeeth(
-                    sctx,
-                    0,
-                    0,
-                    p.baseRadius + 8,
-                    36,
-                    10,
-                    0,
-                    gearAccentAlpha,
-                    2.2,
-                    colorWithAlpha(p.accentTextColor, 0.08 * decorOpacityMultiplier),
-                )),
                 p.centerX,
                 p.centerY,
+                p.baseRadius + 8,
+                36,
+                10,
                 currentGearAngle,
+                gearAccentAlpha,
+                2.2,
+                colorWithAlpha(p.accentTextColor, 0.08 * decorOpacityMultiplier),
             );
 
             // Inner Escapement Spoked Ring
-            blitClockworkSprite(
+            drawSpokedWheel(
                 ctx,
-                sprite('innerSpoked', p.baseRadius * 0.85 + 4, sctx => drawSpokedWheel(
-                    sctx,
-                    0,
-                    0,
-                    p.baseRadius * 0.2,
-                    p.baseRadius * 0.85,
-                    6,
-                    0,
-                    gearPrimaryAlpha,
-                    1.8,
-                )),
                 p.centerX,
                 p.centerY,
+                p.baseRadius * 0.2,
+                p.baseRadius * 0.85,
+                6,
                 currentGearAngle,
+                gearPrimaryAlpha,
+                1.8,
             );
 
             // Beveled double-ring on main gear rim for depth
@@ -653,66 +515,50 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
             ctx.stroke();
 
             // Guilloche radial engraving inside main gear
+            ctx.save();
+            ctx.translate(p.centerX, p.centerY);
+            ctx.rotate(currentGearAngle);
             const guillocheRayCount = 48;
             const guillocheInnerR = p.baseRadius * 0.62;
             const guillocheOuterR = p.baseRadius * 0.83;
-            blitClockworkSprite(
-                ctx,
-                sprite('guilloche', guillocheOuterR + 2, sctx => {
-                    for (let i = 0; i < guillocheRayCount; i++) {
-                        const a = (i * Math.PI * 2) / guillocheRayCount;
-                        // Alternating short/long rays for texture
-                        const innerOffset = i % 2 === 0 ? guillocheInnerR : guillocheInnerR + (guillocheOuterR - guillocheInnerR) * 0.3;
-                        sctx.strokeStyle = i % 2 === 0 ? primaryAlpha10 : colorWithAlpha(p.primaryTextColor, 0.07 * decorOpacityMultiplier);
-                        sctx.lineWidth = 0.7;
-                        sctx.beginPath();
-                        sctx.moveTo(innerOffset * Math.cos(a), innerOffset * Math.sin(a));
-                        sctx.lineTo(guillocheOuterR * Math.cos(a), guillocheOuterR * Math.sin(a));
-                        sctx.stroke();
-                    }
-                }),
-                p.centerX,
-                p.centerY,
-                currentGearAngle,
-            );
+            for (let i = 0; i < guillocheRayCount; i++) {
+                const a = (i * Math.PI * 2) / guillocheRayCount;
+                // Alternating short/long rays for texture
+                const innerOffset = i % 2 === 0 ? guillocheInnerR : guillocheInnerR + (guillocheOuterR - guillocheInnerR) * 0.3;
+                ctx.strokeStyle = i % 2 === 0 ? primaryAlpha10 : colorWithAlpha(p.primaryTextColor, 0.07 * decorOpacityMultiplier);
+                ctx.lineWidth = 0.7;
+                ctx.beginPath();
+                ctx.moveTo(innerOffset * Math.cos(a), innerOffset * Math.sin(a));
+                ctx.lineTo(guillocheOuterR * Math.cos(a), guillocheOuterR * Math.sin(a));
+                ctx.stroke();
+            }
+            ctx.restore();
 
             // Rivet circles along outer gear rim (wireframe style)
             const rivetCount = 12;
             const rivetR = p.baseRadius * 0.96;
-            blitClockworkSprite(
-                ctx,
-                sprite('rivets', rivetR + 4, sctx => {
-                    sctx.strokeStyle = primaryAlpha25;
-                    sctx.lineWidth = 0.8;
-                    for (let i = 0; i < rivetCount; i++) {
-                        const a = (i * Math.PI * 2) / rivetCount;
-                        sctx.beginPath();
-                        sctx.arc(rivetR * Math.cos(a), rivetR * Math.sin(a), 2.2, 0, Math.PI * 2);
-                        sctx.stroke();
-                    }
-                }),
-                p.centerX,
-                p.centerY,
-                currentGearAngle,
-            );
+            for (let i = 0; i < rivetCount; i++) {
+                const a = (i * Math.PI * 2) / rivetCount + currentGearAngle;
+                const rx = p.centerX + rivetR * Math.cos(a);
+                const ry = p.centerY + rivetR * Math.sin(a);
+                ctx.strokeStyle = colorWithAlpha(p.primaryTextColor, 0.25 * decorOpacityMultiplier);
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.arc(rx, ry, 2.2, 0, Math.PI * 2);
+                ctx.stroke();
+            }
 
             // 3. Center Hub & Sun Gear Pinion
-            blitClockworkSprite(
+            drawGearTeeth(
                 ctx,
-                sprite('hubPinion', p.baseRadius * 0.22 + 4, sctx => drawGearTeeth(
-                    sctx,
-                    0,
-                    0,
-                    p.baseRadius * 0.22,
-                    12,
-                    6,
-                    0,
-                    gearAccentStrongAlpha,
-                    2.1,
-                )),
                 p.centerX,
                 p.centerY,
+                p.baseRadius * 0.22,
+                12,
+                6,
                 -currentGearAngle * 2.5,
+                gearAccentStrongAlpha,
+                2.1,
             );
 
             // Center jewel bearing (wireframe double-ring)
@@ -738,23 +584,17 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
                 const px = p.centerX + orbitR * Math.cos(planetAngle);
                 const py = p.centerY + orbitR * Math.sin(planetAngle);
 
-                // Planet gear body — the three planets are identical, so they share one sprite.
-                blitClockworkSprite(
+                // Planet gear body
+                drawGearTeeth(
                     ctx,
-                    sprite('planetGear', planetR + 4, sctx => drawGearTeeth(
-                        sctx,
-                        0,
-                        0,
-                        planetR,
-                        14,
-                        5,
-                        0,
-                        planetGearAlpha,
-                        1.7,
-                    )),
                     px,
                     py,
+                    planetR,
+                    14,
+                    5,
                     -currentGearAngle * 3 + planetIdx * 0.5,
+                    planetGearAlpha,
+                    1.7,
                 );
 
                 // Planet jewel bearing pivot (wireframe double-ring)
@@ -775,50 +615,36 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
             const balanceCy = p.centerY - p.baseRadius * 0.75;
             const balanceR = p.baseRadius * 0.28;
             const balanceGearAngle = phaseRef.current * 0.1;
-            blitClockworkSprite(
+            drawGearTeeth(
                 ctx,
-                sprite('balanceGear', balanceR + 4, sctx => {
-                    drawGearTeeth(
-                        sctx,
-                        0,
-                        0,
-                        balanceR,
-                        20,
-                        7,
-                        0,
-                        gearAccentStrongAlpha,
-                        2.1,
-                        colorWithAlpha(p.accentTextColor, 0.10 * decorOpacityMultiplier),
-                    );
-                    // The inner ring reserves a quiet circular seat for the non-rotating icon overlay.
-                    sctx.strokeStyle = gearPrimarySubtleAlpha;
-                    sctx.lineWidth = 1.8;
-                    sctx.beginPath();
-                    sctx.arc(0, 0, balanceR * 0.52, 0, Math.PI * 2);
-                    sctx.stroke();
-                }),
                 balanceCx,
                 balanceCy,
+                balanceR,
+                20,
+                7,
                 balanceGearAngle,
+                gearAccentStrongAlpha,
+                2.1,
+                colorWithAlpha(p.accentTextColor, 0.10 * decorOpacityMultiplier),
             );
+            // The inner ring reserves a quiet circular seat for the non-rotating icon overlay.
+            ctx.strokeStyle = gearPrimarySubtleAlpha;
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.arc(balanceCx, balanceCy, balanceR * 0.52, 0, Math.PI * 2);
+            ctx.stroke();
 
             // Hairspring spiral at balance wheel
-            blitClockworkSprite(
+            drawHairspring(
                 ctx,
-                sprite('hairspring', balanceR * 0.88 + 2, sctx => drawHairspring(
-                    sctx,
-                    0,
-                    0,
-                    balanceR * 0.56,
-                    balanceR * 0.88,
-                    3.5,
-                    0,
-                    colorWithAlpha(p.accentTextColor, 0.30 * decorOpacityMultiplier),
-                    0.8,
-                )),
                 balanceCx,
                 balanceCy,
+                balanceR * 0.56,
+                balanceR * 0.88,
+                3.5,
                 bassOscillation * 0.6 + balanceGearAngle * 0.3,
+                colorWithAlpha(p.accentTextColor, 0.30 * decorOpacityMultiplier),
+                0.8,
             );
 
             // Balance wheel jewel bearing (wireframe double-ring)
@@ -837,37 +663,50 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
             const transCx = p.centerX + p.baseRadius * 0.32;
             const transCy = p.centerY + p.baseRadius * 0.78;
             const transR = p.baseRadius * 0.34;
-            // Teeth, spokes and the clipped Geneva striping all turn on the same axis at the
-            // same rate, so the whole wheel is one sprite.
-            blitClockworkSprite(
+            drawGearTeeth(
                 ctx,
-                sprite('transGear', transR + 4, sctx => {
-                    drawGearTeeth(sctx, 0, 0, transR, 24, 7, 0, gearPrimaryAlpha, 1.8);
-                    drawSpokedWheel(sctx, 0, 0, transR * 0.25, transR * 0.85, 5, 0, gearPrimarySubtleAlpha, 1.5);
-
-                    // Geneva stripes on transmission gear face (parallel lines clipped to gear circle)
-                    sctx.save();
-                    sctx.beginPath();
-                    sctx.arc(0, 0, transR * 0.80, 0, Math.PI * 2);
-                    sctx.clip();
-                    const genevaStripeCount = 9;
-                    const genevaSpan = transR * 1.6;
-                    const genevaStep = genevaSpan / (genevaStripeCount + 1);
-                    for (let i = 1; i <= genevaStripeCount; i++) {
-                        const yOff = -genevaSpan * 0.5 + i * genevaStep;
-                        sctx.strokeStyle = i % 2 === 0 ? primaryAlpha10 : colorWithAlpha(p.primaryTextColor, 0.06 * decorOpacityMultiplier);
-                        sctx.lineWidth = 0.7;
-                        sctx.beginPath();
-                        sctx.moveTo(-transR, yOff);
-                        sctx.lineTo(transR, yOff);
-                        sctx.stroke();
-                    }
-                    sctx.restore();
-                }),
                 transCx,
                 transCy,
+                transR,
+                24,
+                7,
                 -currentGearAngle * 1.4,
+                gearPrimaryAlpha,
+                1.8,
             );
+            drawSpokedWheel(
+                ctx,
+                transCx,
+                transCy,
+                transR * 0.25,
+                transR * 0.85,
+                5,
+                -currentGearAngle * 1.4,
+                gearPrimarySubtleAlpha,
+                1.5,
+            );
+
+            // Geneva stripes on transmission gear face (parallel lines clipped to gear circle)
+            ctx.save();
+            ctx.translate(transCx, transCy);
+            ctx.rotate(-currentGearAngle * 1.4);
+            // Clip to the gear's inner area
+            ctx.beginPath();
+            ctx.arc(0, 0, transR * 0.80, 0, Math.PI * 2);
+            ctx.clip();
+            const genevaStripeCount = 9;
+            const genevaSpan = transR * 1.6;
+            const genevaStep = genevaSpan / (genevaStripeCount + 1);
+            for (let i = 1; i <= genevaStripeCount; i++) {
+                const yOff = -genevaSpan * 0.5 + i * genevaStep;
+                ctx.strokeStyle = i % 2 === 0 ? primaryAlpha10 : colorWithAlpha(p.primaryTextColor, 0.06 * decorOpacityMultiplier);
+                ctx.lineWidth = 0.7;
+                ctx.beginPath();
+                ctx.moveTo(-transR, yOff);
+                ctx.lineTo(transR, yOff);
+                ctx.stroke();
+            }
+            ctx.restore();
 
             // Transmission gear jewel bearing (wireframe double-ring)
             ctx.strokeStyle = jewelStrokeColor;
@@ -887,40 +726,28 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
             const secondGearCy = p.centerY + p.baseRadius * 0.76;
             const secondGearR = p.baseRadius * 0.16;
             const secondGearAngle = secondGearAngleRef.current;
-            blitClockworkSprite(
+            drawGearTeeth(
                 ctx,
-                sprite('secondsTeeth', secondGearR + 4, sctx => drawGearTeeth(
-                    sctx,
-                    0,
-                    0,
-                    secondGearR,
-                    secondGearTeeth,
-                    5,
-                    0,
-                    gearAccentAlpha,
-                    1.8,
-                    colorWithAlpha(p.accentTextColor, 0.06 * decorOpacityMultiplier),
-                )),
                 secondGearCx,
                 secondGearCy,
+                secondGearR,
+                secondGearTeeth,
+                5,
                 secondGearAngle,
+                gearAccentAlpha,
+                1.8,
+                colorWithAlpha(p.accentTextColor, 0.06 * decorOpacityMultiplier),
             );
-            blitClockworkSprite(
+            drawSpokedWheel(
                 ctx,
-                sprite('secondsSpokes', secondGearR * 0.76 + 3, sctx => drawSpokedWheel(
-                    sctx,
-                    0,
-                    0,
-                    secondGearR * 0.28,
-                    secondGearR * 0.76,
-                    4,
-                    0,
-                    gearPrimarySubtleAlpha,
-                    1.3,
-                )),
                 secondGearCx,
                 secondGearCy,
+                secondGearR * 0.28,
+                secondGearR * 0.76,
+                4,
                 -secondGearAngle,
+                gearPrimarySubtleAlpha,
+                1.3,
             );
             // Seconds gear jewel bearing (wireframe double-ring)
             ctx.strokeStyle = jewelStrokeColor;
@@ -938,31 +765,23 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
             const idlerCx = (transCx + secondGearCx) * 0.5 + p.baseRadius * 0.04;
             const idlerCy = (transCy + secondGearCy) * 0.5 - p.baseRadius * 0.02;
             const idlerR = p.baseRadius * 0.08;
-            blitClockworkSprite(
+            drawGearTeeth(
                 ctx,
-                sprite('idler', idlerR + 3, sctx => {
-                    drawGearTeeth(
-                        sctx,
-                        0,
-                        0,
-                        idlerR,
-                        10,
-                        3.5,
-                        0,
-                        colorWithAlpha(p.primaryTextColor, 0.28 * decorOpacityMultiplier),
-                        1.3,
-                    );
-                    // Idler inner ring
-                    sctx.strokeStyle = colorWithAlpha(p.primaryTextColor, 0.18 * decorOpacityMultiplier);
-                    sctx.lineWidth = 0.8;
-                    sctx.beginPath();
-                    sctx.arc(0, 0, idlerR * 0.45, 0, Math.PI * 2);
-                    sctx.stroke();
-                }),
                 idlerCx,
                 idlerCy,
+                idlerR,
+                10,
+                3.5,
                 currentGearAngle * 2.2,
+                colorWithAlpha(p.primaryTextColor, 0.28 * decorOpacityMultiplier),
+                1.3,
             );
+            // Idler inner ring
+            ctx.strokeStyle = colorWithAlpha(p.primaryTextColor, 0.18 * decorOpacityMultiplier);
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.arc(idlerCx, idlerCy, idlerR * 0.45, 0, Math.PI * 2);
+            ctx.stroke();
             // Idler jewel bearing (wireframe double-ring)
             ctx.strokeStyle = jewelStrokeColor;
             ctx.lineWidth = 0.7;
@@ -1003,12 +822,10 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
 
         animationFrameId = window.requestAnimationFrame(render);
 
-        const spriteCache = spriteCacheRef.current;
         return () => {
             if (animationFrameId) {
                 window.cancelAnimationFrame(animationFrameId);
             }
-            releaseSpriteCache(spriteCache);
         };
     }, [showGearDecor, showCenterGradient, showCover, audioBassMotionValue, escapementAngleMotionValue]);
 

@@ -10,11 +10,10 @@ import type { ProbeDefinition } from './definition';
 /**
  * 单个 visualizer 的长跑内存/性能台架。
  *
- * 存在的理由：visualizer 的内存问题几乎都不在 JS 堆里 —— 真正吃内存的是 canvas backing
- * store、合成层和 Skia 的 GPU 路径缓存，这些只有在真实 GPU 合成的浏览器里长时间跑才看得出来，
- * 单测和 jsdom 一律测不到。这个探针只挂一个 visualizer，用加速时间轴喂它合成歌词，
- * 配合 `npm run manual:visualizer-memory` 采样 Chromium 各进程的工作集，就能横向对比不同
- * visualizer、或者 A/B 同一个 visualizer 改动前后的稳态占用。
+ * 存在的理由：visualizer 的内存可能来自 JS 堆之外的 canvas backing store、合成层和 GPU
+ * 资源，单测和 jsdom 无法覆盖这些路径。这个探针只挂一个 visualizer，用加速时间轴喂它
+ * 合成歌词，配合 `npm run manual:visualizer-memory` 采样 Chromium 各进程的工作集，可用于
+ * 横向对比不同 visualizer，或者 A/B 同一个 visualizer 改动前后的稳态占用。
  *
  * 用法见文件末尾的 description，或直接 `?probe=visualizerMemory&vis=<mode>`。
  */
@@ -60,7 +59,7 @@ const MODE = params.get('vis') ?? 'pendolo';
 const SPEED = Number(params.get('speed') ?? '8');
 const LINES = buildLines(Number(params.get('lines') ?? '400'));
 const TOTAL_SECONDS = LINES.length * SECONDS_PER_LINE;
-/** 每隔 N 秒换一次 seed，模拟切歌导致的整棵子树重挂载。0 表示不换。 */
+/** 每隔 N 秒换一次 seed，模拟切歌时输入 seed 变化；是否重挂载由宿主的 key 策略决定。0 表示不换。 */
 const SWITCH_SECONDS = Number(params.get('switch') ?? '0');
 /** 冻结在固定一帧，用来逐像素比对改动前后的渲染结果。 */
 const FREEZE = params.get('freeze') === '1';
