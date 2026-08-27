@@ -245,6 +245,7 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
     const secondGearVelocityRef = useRef(0);
 
     const coverImageRef = useRef<HTMLImageElement | null>(null);
+    const requestRenderRef = useRef<(() => void) | null>(null);
 
     useEffect(() => {
         if (!showCover || !coverUrl) {
@@ -254,10 +255,16 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
         const img = new Image();
         let cancelled = false;
         img.onload = () => {
-            if (!cancelled) coverImageRef.current = img;
+            if (!cancelled) {
+                coverImageRef.current = img;
+                requestRenderRef.current?.();
+            }
         };
         img.onerror = () => {
-            if (!cancelled) coverImageRef.current = null;
+            if (!cancelled) {
+                coverImageRef.current = null;
+                requestRenderRef.current?.();
+            }
         };
         img.src = coverUrl;
         return () => {
@@ -314,16 +321,30 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
             paused,
             motionProfile,
         };
+        requestRenderRef.current?.();
     }, [contentBox, centerX, centerY, baseRadius, lyricRingRadius, audioBass, primaryTextColor, accentTextColor, backgroundColor, showGearDecor, showCenterGradient, showCover, paused, motionProfile]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || (showGearDecor === 'none' && !showCenterGradient && !showCover)) return;
 
-        const ctx = canvas.getContext('2d');
+        // Keep this canvas off Chromium's affected Windows Canvas2D path without penalizing other platforms.
+        const ctx = canvas.getContext(
+            '2d',
+            window.electron?.platform === 'win32' ? { willReadFrequently: true } : undefined,
+        );
         if (!ctx) return;
 
-        let animationFrameId: number;
+        let animationFrameId: number | null = null;
+        let disposed = false;
+
+        const requestRender = () => {
+            if (disposed || animationFrameId !== null) return;
+            animationFrameId = window.requestAnimationFrame((timestamp) => {
+                animationFrameId = null;
+                render(timestamp);
+            });
+        };
 
         const render = (timestamp: number) => {
             const p = propsRef.current;
@@ -372,7 +393,7 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
             const width = box.width;
             const height = box.height;
             if (width <= 0 || height <= 0) {
-                animationFrameId = window.requestAnimationFrame(render);
+                if (!p.paused) requestRender();
                 return;
             }
             const dpr = window.devicePixelRatio || 1;
@@ -423,7 +444,7 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
 
             if (p.showGearDecor === 'none') {
                 ctx.restore();
-                animationFrameId = window.requestAnimationFrame(render);
+                if (!p.paused) requestRender();
                 return;
             }
 
@@ -817,14 +838,19 @@ const PendoloClockworkCanvas: React.FC<PendoloClockworkCanvasProps> = ({
 
             ctx.restore();
 
-            animationFrameId = window.requestAnimationFrame(render);
+            if (!p.paused) requestRender();
         };
 
-        animationFrameId = window.requestAnimationFrame(render);
+        requestRenderRef.current = requestRender;
+        requestRender();
 
         return () => {
-            if (animationFrameId) {
+            disposed = true;
+            if (animationFrameId !== null) {
                 window.cancelAnimationFrame(animationFrameId);
+            }
+            if (requestRenderRef.current === requestRender) {
+                requestRenderRef.current = null;
             }
         };
     }, [showGearDecor, showCenterGradient, showCover, audioBassMotionValue, escapementAngleMotionValue]);
