@@ -3334,6 +3334,8 @@ export default function App() {
         handleNextTrack,
         prevTrackLabel: t('ui.previousTrack'),
         nextTrackLabel: t('ui.nextTrack'),
+        currentSongArtist,
+        stageCoverUrl: coverUrl,
     }), [
         activePlaybackContext,
         audioSrc,
@@ -3342,6 +3344,8 @@ export default function App() {
         displaySong,
         currentTime,
         currentView,
+        currentSongArtist,
+        coverUrl,
         devDebugSnapshot,
         displayDuration,
         effectiveLoopMode,
