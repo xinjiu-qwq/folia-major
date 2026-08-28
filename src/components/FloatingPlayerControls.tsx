@@ -60,6 +60,8 @@ interface FloatingPlayerControlsProps {
     stageTrackPill?: {
         artist: string | null;
         coverUrl: string | null;
+        mode: 'auto' | 'always' | 'never';
+        timeoutSec: number;
     } | null;
 }
 
@@ -238,6 +240,8 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
                     title={currentSong.name}
                     artist={stageTrackPill.artist}
                     coverUrl={stageTrackPill.coverUrl}
+                    mode={stageTrackPill.mode}
+                    timeoutSec={stageTrackPill.timeoutSec}
                     isDaylight={isDaylight}
                     controlsDisabled={controlsDisabled}
                     onNavigateToPlayer={onNavigateToPlayer}
