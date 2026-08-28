@@ -18,6 +18,8 @@ interface QueueTabProps {
     queueScrollRef: React.RefObject<HTMLDivElement | null>;
     shouldScrollToCurrent?: boolean;
     onShuffle?: () => void;
+    shuffleMode?: boolean;
+    onToggleShuffleMode?: () => void;
     onRemoveSong: (index: number) => void;
     onMoveSongToEnd: (index: number) => void;
     onMoveSongToNext: (index: number) => void;
@@ -120,6 +122,8 @@ const QueueTab: React.FC<QueueTabProps> = ({
     queueScrollRef,
     shouldScrollToCurrent = false,
     onShuffle,
+    shuffleMode = false,
+    onToggleShuffleMode,
     onRemoveSong,
     onMoveSongToEnd,
     onMoveSongToNext,
@@ -247,10 +251,20 @@ const QueueTab: React.FC<QueueTabProps> = ({
                         {onShuffle && (
                             <button
                                 onClick={onShuffle}
-                                className="p-1.5 rounded-md hover:bg-white/10 transition-colors opacity-60 hover:opacity-100"
+                                className={`p-1.5 rounded-md transition-colors ${shuffleMode ? 'bg-white/20 opacity-100' : 'opacity-60 hover:opacity-100 hover:bg-white/10'}`}
                                 title={t('queue.shuffle')}
                             >
                                 <Shuffle size={14} />
+                            </button>
+                        )}
+                        {onToggleShuffleMode && (
+                            <button
+                                onClick={onToggleShuffleMode}
+                                aria-pressed={shuffleMode}
+                                className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${shuffleMode ? 'text-emerald-400 bg-emerald-400/10' : 'opacity-60 hover:opacity-100 hover:bg-white/10'}`}
+                                title={t('queue.shuffleMode')}
+                            >
+                                {t('queue.shuffleMode')}
                             </button>
                         )}
                     </div>

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Play, Pause, Repeat, Repeat1, RepeatOff,ChartBar } from 'lucide-react';
 import { MotionValue } from 'framer-motion';
 import ProgressBar from './ProgressBar';
+import StageTrackPill from './floating-player/StageTrackPill';
 import { PlayerState, LyricData, Theme } from '../types';
 import LyricsTimelineModal from './modal/LyricsTimelineModal';
 import TrackTitleNavigator from './floating-player/TrackTitleNavigator';
@@ -55,6 +56,11 @@ interface FloatingPlayerControlsProps {
     hideControlBar?: boolean;
     controlsDisabled?: boolean;
     trackNavigation?: TrackNavigation | null;
+    /** 歌词页左下角曲目卡片（封面+歌名/歌手）；传入即渲染 */
+    stageTrackPill?: {
+        artist: string | null;
+        coverUrl: string | null;
+    } | null;
 }
 
 
@@ -82,6 +88,7 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
     hideControlBar = false,
     controlsDisabled = false,
     trackNavigation = null,
+    stageTrackPill = null,
 }) => {
     const { t } = useTranslation();
     // const isDaylight = theme?.name === 'Daylight Default'; // Deprecated, passed as prop
@@ -225,6 +232,19 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
                     </motion.div>
                 </div>
             </motion.div>
+
+            {stageTrackPill && currentSong && (
+                <StageTrackPill
+                    title={currentSong.name}
+                    artist={stageTrackPill.artist}
+                    coverUrl={stageTrackPill.coverUrl}
+                    isDaylight={isDaylight}
+                    controlsDisabled={controlsDisabled}
+                    onNavigateToPlayer={onNavigateToPlayer}
+                    primaryColor={primaryColor}
+                    secondaryColor={secondaryColor}
+                />
+            )}
 
             <LyricsTimelineModal
                 isOpen={isTimelineOpen}

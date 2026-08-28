@@ -1957,7 +1957,8 @@ export default {
     "playNext": "下一首播放",
     "empty": "播放列表为空",
     "title": "播放队列",
-    "shuffle": "打乱队列"
+    "shuffle": "打乱队列",
+    "shuffleMode": "随机播放"
   },
   "theme": {
     "switchToDark": "切换到深色模式",

@@ -1957,7 +1957,8 @@ export default {
     "playNext": "Play next",
     "empty": "Queue is empty",
     "title": "Play Queue",
-    "shuffle": "Shuffle Queue"
+    "shuffle": "Shuffle Queue",
+    "shuffleMode": "Shuffle Play"
   },
   "theme": {
     "switchToDark": "Switch to Dark Mode",

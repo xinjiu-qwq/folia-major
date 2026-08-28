@@ -1897,7 +1897,8 @@ export default {
     "playNext": "Putar berikutnya",
     "empty": "Antrean kosong",
     "title": "Antrean Putar",
-    "shuffle": "Acak Antrean"
+    "shuffle": "Acak Antrean",
+    "shuffleMode": "Putar Acak"
   },
   "theme": {
     "switchToDark": "Beralih ke Mode Gelap",

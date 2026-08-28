@@ -61,6 +61,7 @@ type UsePlaybackQueueControllerParams = {
     playQueue: SongResult[];
     playerState: PlayerState;
     loopMode: 'off' | 'all' | 'one';
+    shuffleMode: boolean;
     isFmMode: boolean;
     isNowPlayingStageActive: boolean;
     queueAddBehavior: QueueAddBehavior;
@@ -153,6 +154,7 @@ export function usePlaybackQueueController({
     playQueue,
     playerState,
     loopMode,
+    shuffleMode,
     isFmMode,
     isNowPlayingStageActive,
     queueAddBehavior,
@@ -867,7 +869,15 @@ export function usePlaybackQueueController({
 
         let nextIndex = -1;
 
-        if (currentIndex >= 0 && currentIndex < playQueue.length - 1) {
+        if (shuffleMode && playQueue.length > 1) {
+            // 随机模式：从队列中随机挑一首非当前曲目
+            const candidates = playQueue
+                .map((_, index) => index)
+                .filter(index => index !== currentIndex);
+            if (candidates.length > 0) {
+                nextIndex = candidates[Math.floor(Math.random() * candidates.length)];
+            }
+        } else if (currentIndex >= 0 && currentIndex < playQueue.length - 1) {
             nextIndex = currentIndex + 1;
         } else if (currentIndex < 0 && playQueue.length > 0) {
             nextIndex = 0;
@@ -883,7 +893,7 @@ export function usePlaybackQueueController({
         } else if (options?.allowStopOnMissing) {
             stopAtQueueEnd();
         }
-    }, [audioRef, currentSong, isFmMode, isNowPlayingStageActive, loopMode, playQueue, playSong, setPlayQueue, setPlayerState]);
+    }, [audioRef, currentSong, isFmMode, isNowPlayingStageActive, loopMode, playQueue, playSong, setPlayQueue, setPlayerState, shuffleMode]);
 
     const handlePrevTrack = useCallback(() => {
         if (isNowPlayingStageActive) return;

@@ -1245,6 +1245,14 @@ const readStoredLoopMode = (): 'off' | 'all' | 'one' => {
     return saved === 'all' || saved === 'one' ? saved : 'off';
 };
 
+const readStoredShuffleMode = (): boolean => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    return localStorage.getItem('player_shuffle_mode') === 'on';
+};
+
 const readStoredQueueAddBehavior = (): QueueAddBehavior => {
     if (typeof window === 'undefined') {
         return 'append';
@@ -1418,6 +1426,8 @@ export type SettingsUiState = {
     volume: number;
     isMuted: boolean;
     loopMode: 'off' | 'all' | 'one';
+    /** 随机播放模式：开启时切歌从队列未播放曲目中随机挑选，替代顺序下一首 */
+    shuffleMode: boolean;
     homeLayoutStyle: 'carousel' | 'grid';
     grid3dCardStyle: 'image' | 'card';
     showHomeTabPlaylist: boolean;
@@ -1568,6 +1578,7 @@ export type SettingsUiState = {
     handleSetVolume: (val: number) => void;
     handleToggleMute: () => void;
     handleToggleLoopMode: () => void;
+    handleToggleShuffleMode: () => void;
     handleSetHomeLayoutStyle: (style: 'carousel' | 'grid') => void;
     handleSetGrid3dCardStyle: (style: 'image' | 'card') => void;
     handleToggleHomeTabPlaylist: (show: boolean) => void;
@@ -1687,6 +1698,7 @@ export const useSettingsUiStore = create<SettingsUiState>((set, get) => ({
     volume: readStoredVolume(),
     isMuted: getStoredBoolean('player_is_muted', false),
     loopMode: readStoredLoopMode(),
+    shuffleMode: readStoredShuffleMode(),
     homeLayoutStyle: readStoredHomeLayoutStyle(),
     grid3dCardStyle: readStoredGrid3dCardStyle(),
     showHomeTabPlaylist: getStoredBoolean('show_home_tab_playlist', true),
@@ -2973,6 +2985,13 @@ export const useSettingsUiStore = create<SettingsUiState>((set, get) => ({
         }
         set({ loopMode: next });
     },
+    handleToggleShuffleMode: () => {
+        const next = !get().shuffleMode;
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('player_shuffle_mode', next ? 'on' : 'off');
+        }
+        set({ shuffleMode: next });
+    },
     handleSetHomeLayoutStyle: () => {
         if (typeof window !== 'undefined') {
             localStorage.setItem('home_layout_style', 'grid');
@@ -3119,6 +3138,8 @@ export const selectSettingsUiSnapshot = (state: SettingsUiState) => ({
     queueAddBehavior: state.queueAddBehavior,
     audioOutputDeviceId: state.audioOutputDeviceId,
     loopMode: state.loopMode,
+    shuffleMode: state.shuffleMode,
+    handleToggleShuffleMode: state.handleToggleShuffleMode,
     handleToggleCoverColorBg: state.handleToggleCoverColorBg,
     handleToggleStaticMode: state.handleToggleStaticMode,
     handleToggleDisableHomeDynamicBackground: state.handleToggleDisableHomeDynamicBackground,

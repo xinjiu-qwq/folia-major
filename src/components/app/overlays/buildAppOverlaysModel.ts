@@ -65,6 +65,9 @@ type BuildAppOverlaysModelParams = {
     handleNextTrack: () => void;
     prevTrackLabel: string;
     nextTrackLabel: string;
+    /** 左下角卡片所在视图（player=歌词页）；home 不显示 */
+    currentSongArtist: string | null;
+    stageCoverUrl: string | null;
 };
 
 // Builds the full overlay model, including detail overlays and floating playback controls.
@@ -113,6 +116,8 @@ export const buildAppOverlaysModel = ({
     handleNextTrack,
     prevTrackLabel,
     nextTrackLabel,
+    currentSongArtist,
+    stageCoverUrl,
 }: BuildAppOverlaysModelParams): AppOverlaysModel => ({
     searchOverlay: currentView === 'home'
         ? {
@@ -195,6 +200,12 @@ export const buildAppOverlaysModel = ({
                     nextLabel: nextTrackLabel,
                 };
             })(),
+            stageTrackPill: currentView === 'player'
+                ? {
+                    artist: currentSongArtist,
+                    coverUrl: stageCoverUrl,
+                }
+                : null,
         }
         : null,
 });
