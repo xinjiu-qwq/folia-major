@@ -76,6 +76,9 @@ type BuildAppOverlaysModelParams = {
     stageCoverUrl: string | null;
     stageTrackPillMode: 'auto' | 'always' | 'never';
     stageTrackPillTimeoutSec: number;
+    stageTrackPillShowOnHome: boolean;
+    /** 点击卡片打开右侧面板（player 视图下 PlayerPanel 已挂载） */
+    onOpenPlayerPanel: () => void;
 };
 
 // Builds the full overlay model, including detail overlays and floating playback controls.
@@ -131,6 +134,8 @@ export const buildAppOverlaysModel = ({
     stageCoverUrl,
     stageTrackPillMode,
     stageTrackPillTimeoutSec,
+    stageTrackPillShowOnHome,
+    onOpenPlayerPanel,
 }: BuildAppOverlaysModelParams): AppOverlaysModel => ({
     searchOverlay: currentView === 'home'
         ? {
@@ -228,12 +233,13 @@ export const buildAppOverlaysModel = ({
                     nextLabel: nextTrackLabel,
                 };
             })(),
-            stageTrackPill: currentView === 'player'
+            stageTrackPill: (currentView === 'player' || stageTrackPillShowOnHome)
                 ? {
                     artist: displaySongArtist,
                     coverUrl: stageCoverUrl,
                     mode: stageTrackPillMode,
                     timeoutSec: stageTrackPillTimeoutSec,
+                    onOpenPlayerPanel,
                 }
                 : null,
         }

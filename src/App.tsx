@@ -424,6 +424,8 @@ export default function App() {
         handleSetStageTrackPillMode,
         stageTrackPillTimeoutSec,
         handleSetStageTrackPillTimeoutSec,
+        stageTrackPillShowOnHome,
+        handleSetStageTrackPillShowOnHome,
         handleToggleCoverColorBg,
         handleToggleStaticMode,
         handleToggleDisableHomeDynamicBackground,
@@ -3342,6 +3344,15 @@ export default function App() {
         stageCoverUrl: coverUrl,
         stageTrackPillMode,
         stageTrackPillTimeoutSec,
+        stageTrackPillShowOnHome,
+        onOpenPlayerPanel: () => {
+            if (currentView === 'player') {
+                setPanelTab('cover');
+                setIsPanelOpen(true);
+            } else {
+                navigateToPlayer();
+            }
+        },
     }), [
         activePlaybackContext,
         audioSrc,
@@ -3354,6 +3365,8 @@ export default function App() {
         coverUrl,
         stageTrackPillMode,
         stageTrackPillTimeoutSec,
+        stageTrackPillShowOnHome,
+        navigateToPlayer,
         devDebugSnapshot,
         displayDuration,
         effectiveLoopMode,

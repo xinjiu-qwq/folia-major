@@ -62,6 +62,7 @@ interface FloatingPlayerControlsProps {
         coverUrl: string | null;
         mode: 'auto' | 'always' | 'never';
         timeoutSec: number;
+        onOpenPlayerPanel: () => void;
     } | null;
 }
 
@@ -245,6 +246,7 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
                     isDaylight={isDaylight}
                     controlsDisabled={controlsDisabled}
                     onNavigateToPlayer={onNavigateToPlayer}
+                    onOpenPlayerPanel={stageTrackPill.onOpenPlayerPanel}
                     primaryColor={primaryColor}
                     secondaryColor={secondaryColor}
                 />

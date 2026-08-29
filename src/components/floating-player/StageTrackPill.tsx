@@ -19,6 +19,8 @@ export interface StageTrackPillProps {
     timeoutSec: number;
     isDaylight: boolean;
     controlsDisabled?: boolean;
+    /** 点击卡片行为：player 视图打开右侧面板（P1），home 视图导航到歌词页 */
+    onOpenPlayerPanel: () => void;
     onNavigateToPlayer: () => void;
     primaryColor?: string;
     secondaryColor?: string;
@@ -32,6 +34,7 @@ const StageTrackPill: React.FC<StageTrackPillProps> = ({
     timeoutSec,
     isDaylight,
     controlsDisabled = false,
+    onOpenPlayerPanel,
     onNavigateToPlayer,
     primaryColor = 'var(--text-primary)',
     secondaryColor = 'var(--text-secondary)',
@@ -96,7 +99,7 @@ const StageTrackPill: React.FC<StageTrackPillProps> = ({
                         onClick={(e) => {
                             e.stopPropagation();
                             if (!controlsDisabled) {
-                                onNavigateToPlayer();
+                                onOpenPlayerPanel();
                             }
                         }}
                         className={`group/card flex h-[72px] w-fit max-w-[calc(100vw-120px)] items-center gap-3.5 overflow-hidden rounded-full border py-3 pl-3 pr-6 text-left backdrop-blur-xl transition-colors duration-300 ${glassClass}`}

@@ -1166,6 +1166,8 @@ export default {
     "stageTrackPillMode_always": "常驻显示",
     "stageTrackPillMode_never": "不显示",
     "stageTrackPillTimeout": "显示时长",
+    "stageTrackPillShowOnHome": "在主页显示",
+    "stageTrackPillShowOnHomeDesc": "开启后，主页左下角也会显示该曲目卡片。",
     "disableVisualizerVignette": "禁用暗角",
     "disableVisualizerVignetteDesc": "关闭几何背景自带的边缘暗角，建议配合透明背景使用。",
     "disableVisualizerGeometricBackground": "隐藏通用几何背景",

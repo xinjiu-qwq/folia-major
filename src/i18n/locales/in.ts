@@ -1162,6 +1162,8 @@ export default {
     "stageTrackPillMode_always": "Selalu tampil",
     "stageTrackPillMode_never": "Jangan tampilkan",
     "stageTrackPillTimeout": "Durasi tampil",
+    "stageTrackPillShowOnHome": "Tampilkan di Beranda",
+    "stageTrackPillShowOnHomeDesc": "Saat diaktifkan, kartu lagu juga tampil di kiri bawah Beranda.",
     "disableVisualizerVignette": "Nonaktifkan vignette",
     "disableVisualizerVignetteDesc": "Hanya menghapus vignette tepi latar belakang geometris. Latar belakang transparan dan bentuk geometris tetap terpisah.",
     "disableVisualizerGeometricBackground": "Sembunyikan latar belakang geometris umum",

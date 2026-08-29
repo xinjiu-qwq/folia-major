@@ -56,8 +56,10 @@ type AppearanceSettingsSubviewProps = {
     autoHidePlayerChrome: boolean;
     stageTrackPillMode: 'auto' | 'always' | 'never';
     stageTrackPillTimeoutSec: number;
+    stageTrackPillShowOnHome: boolean;
     onChangeStageTrackPillMode: (mode: 'auto' | 'always' | 'never') => void;
     onChangeStageTrackPillTimeoutSec: (sec: number) => void;
+    onChangeStageTrackPillShowOnHome: (enabled: boolean) => void;
     utilityGhostButtonClass: string;
     grid3dCardStyle: 'image' | 'card';
     onChangeGrid3dCardStyle: (style: 'image' | 'card') => void;
@@ -99,8 +101,10 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
     autoHidePlayerChrome,
     stageTrackPillMode,
     stageTrackPillTimeoutSec,
+    stageTrackPillShowOnHome,
     onChangeStageTrackPillMode,
     onChangeStageTrackPillTimeoutSec,
+    onChangeStageTrackPillShowOnHome,
     utilityGhostButtonClass,
     grid3dCardStyle,
     onChangeGrid3dCardStyle,
@@ -799,26 +803,44 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                                 ))}
                             </div>
                             {stageTrackPillMode === 'auto' && (
-                                <div className="flex items-center justify-between gap-4 pt-1">
-                                    <div className="text-xs opacity-50" style={{ color: 'var(--text-secondary)' }}>
-                                        {t('options.stageTrackPillTimeout')}
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <input
-                                            type="range"
-                                            min={3}
-                                            max={60}
-                                            step={1}
-                                            value={stageTrackPillTimeoutSec}
-                                            onChange={(e) => onChangeStageTrackPillTimeoutSec(Number(e.target.value))}
-                                            className="w-36 accent-current"
-                                        />
-                                        <span className="text-xs font-mono w-12 text-right" style={{ color: 'var(--text-primary)' }}>
+                                <div className="space-y-2 pt-1">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span style={{ color: 'var(--text-primary)' }}>
+                                            {t('options.stageTrackPillTimeout')}
+                                        </span>
+                                        <span className="font-mono opacity-70" style={{ color: 'var(--text-secondary)' }}>
                                             {stageTrackPillTimeoutSec}s
                                         </span>
                                     </div>
+                                    <input
+                                        type="range"
+                                        min={3}
+                                        max={60}
+                                        step={1}
+                                        value={stageTrackPillTimeoutSec}
+                                        onChange={(e) => onChangeStageTrackPillTimeoutSec(Number(e.target.value))}
+                                        className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-current [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:transition-transform [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:transition-transform"
+                                        style={{ color: isDaylight ? 'rgb(39 39 42)' : 'rgb(255 255 255)' }}
+                                    />
                                 </div>
                             )}
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="space-y-1">
+                                    <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                                        {t('options.stageTrackPillShowOnHome')}
+                                    </div>
+                                    <div className="text-xs opacity-50 max-w-[360px]" style={{ color: 'var(--text-secondary)' }}>
+                                        {t('options.stageTrackPillShowOnHomeDesc')}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => onChangeStageTrackPillShowOnHome(!stageTrackPillShowOnHome)}
+                                    className={`w-12 h-6 rounded-full p-1 transition-colors shrink-0 ${!stageTrackPillShowOnHome ? toggleOffBackgroundClass : ''}`}
+                                    style={{ backgroundColor: stageTrackPillShowOnHome ? theme?.secondaryColor || 'rgba(114, 119, 134, 1)' : undefined }}
+                                >
+                                    <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${stageTrackPillShowOnHome ? 'translate-x-6' : 'translate-x-0'}`} />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

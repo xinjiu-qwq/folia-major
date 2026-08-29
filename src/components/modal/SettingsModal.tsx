@@ -308,8 +308,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         handleSetGrid3dCardStyle: onChangeGrid3dCardStyle,
         stageTrackPillMode,
         stageTrackPillTimeoutSec,
+        stageTrackPillShowOnHome,
         handleSetStageTrackPillMode: onChangeStageTrackPillMode,
         handleSetStageTrackPillTimeoutSec: onChangeStageTrackPillTimeoutSec,
+        handleSetStageTrackPillShowOnHome: onChangeStageTrackPillShowOnHome,
     } = useSettingsUiStore(useShallow(selectSettingsUiSnapshot));
     const resolvedToggleTransparentPlayerBackground = onToggleTransparentPlayerBackground ?? onToggleTransparentPlayerBackgroundFromStore;
     const setIsSubSettingsViewOpen = useSettingsUiStore(state => state.setIsSubSettingsViewOpen);
@@ -1597,6 +1599,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 autoHidePlayerChrome={autoHidePlayerChrome}
                                                 stageTrackPillMode={stageTrackPillMode}
                                                 stageTrackPillTimeoutSec={stageTrackPillTimeoutSec}
+                                                stageTrackPillShowOnHome={stageTrackPillShowOnHome}
+                                                onChangeStageTrackPillShowOnHome={onChangeStageTrackPillShowOnHome}
                                                 onChangeStageTrackPillMode={onChangeStageTrackPillMode}
                                                 onChangeStageTrackPillTimeoutSec={onChangeStageTrackPillTimeoutSec}
                                                 utilityGhostButtonClass={utilityGhostButtonClass}

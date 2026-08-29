@@ -1357,6 +1357,14 @@ const readStoredStageTrackPillTimeoutSec = (): number => {
     return Number.isFinite(saved) && saved >= 3 && saved <= 60 ? Math.round(saved) : 10;
 };
 
+const readStoredStageTrackPillShowOnHome = (): boolean => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    return localStorage.getItem('stage_track_pill_show_on_home') === 'on';
+};
+
 const readStoredQueueAddBehavior = (): QueueAddBehavior => {
     if (typeof window === 'undefined') {
         return 'append';
@@ -1571,6 +1579,8 @@ export type SettingsUiState = {
     stageTrackPillMode: StageTrackPillMode;
     /** auto 模式下的显示时长（秒），3-60 */
     stageTrackPillTimeoutSec: number;
+    /** 主页（Home 视图）是否也显示左下角曲目卡片 */
+    stageTrackPillShowOnHome: boolean;
     homeLayoutStyle: 'carousel' | 'grid';
     grid3dCardStyle: 'image' | 'card';
     showHomeTabPlaylist: boolean;
@@ -1735,6 +1745,7 @@ export type SettingsUiState = {
     handleToggleLoopMode: () => void;
     handleSetStageTrackPillMode: (mode: StageTrackPillMode) => void;
     handleSetStageTrackPillTimeoutSec: (sec: number) => void;
+    handleSetStageTrackPillShowOnHome: (enabled: boolean) => void;
     handleSetHomeLayoutStyle: (style: 'carousel' | 'grid') => void;
     handleSetGrid3dCardStyle: (style: 'image' | 'card') => void;
     handleToggleHomeTabPlaylist: (show: boolean) => void;
@@ -1874,6 +1885,7 @@ export const useSettingsUiStore = create<SettingsUiState>((set, get) => ({
     loopMode: readStoredLoopMode(),
     stageTrackPillMode: readStoredStageTrackPillMode(),
     stageTrackPillTimeoutSec: readStoredStageTrackPillTimeoutSec(),
+    stageTrackPillShowOnHome: readStoredStageTrackPillShowOnHome(),
     homeLayoutStyle: readStoredHomeLayoutStyle(),
     grid3dCardStyle: readStoredGrid3dCardStyle(),
     showHomeTabPlaylist: getStoredBoolean('show_home_tab_playlist', true),
@@ -3270,6 +3282,12 @@ export const useSettingsUiStore = create<SettingsUiState>((set, get) => ({
         }
         set({ stageTrackPillTimeoutSec: next });
     },
+    handleSetStageTrackPillShowOnHome: (enabled) => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('stage_track_pill_show_on_home', enabled ? 'on' : 'off');
+        }
+        set({ stageTrackPillShowOnHome: enabled });
+    },
     handleSetHomeLayoutStyle: () => {
         if (typeof window !== 'undefined') {
             localStorage.setItem('home_layout_style', 'grid');
@@ -3427,8 +3445,10 @@ export const selectSettingsUiSnapshot = (state: SettingsUiState) => ({
     loopMode: state.loopMode,
     stageTrackPillMode: state.stageTrackPillMode,
     stageTrackPillTimeoutSec: state.stageTrackPillTimeoutSec,
+    stageTrackPillShowOnHome: state.stageTrackPillShowOnHome,
     handleSetStageTrackPillMode: state.handleSetStageTrackPillMode,
     handleSetStageTrackPillTimeoutSec: state.handleSetStageTrackPillTimeoutSec,
+    handleSetStageTrackPillShowOnHome: state.handleSetStageTrackPillShowOnHome,
     handleToggleCoverColorBg: state.handleToggleCoverColorBg,
     handleToggleStaticMode: state.handleToggleStaticMode,
     handleToggleDisableHomeDynamicBackground: state.handleToggleDisableHomeDynamicBackground,

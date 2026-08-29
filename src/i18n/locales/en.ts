@@ -1166,6 +1166,8 @@ export default {
     "stageTrackPillMode_always": "Always show",
     "stageTrackPillMode_never": "Never show",
     "stageTrackPillTimeout": "Visible duration",
+    "stageTrackPillShowOnHome": "Show on Home",
+    "stageTrackPillShowOnHomeDesc": "When enabled, the track card also appears in the bottom-left corner of Home.",
     "disableVisualizerVignette": "Disable vignette",
     "disableVisualizerVignetteDesc": "Only removes the geometric background edge vignette. Transparent background and geometric shapes stay separate.",
     "disableVisualizerGeometricBackground": "Hide common geometric background",
